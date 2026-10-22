@@ -29,3 +29,15 @@ Open http://127.0.0.1:8000/docs for the interactive documentation.
 | `GET /courses/web-security` | 200, one course |
 | `GET /courses/nope` | 404, `{"detail": "Course not found"}` |
 | `/docs` | exactly three routes: `GET /`, `GET /courses`, `GET /courses/{course_id}` |
+
+## What changed (integration with the Next.js frontend)
+
+- **CORS.** `CORSMiddleware` allows exactly one origin, `http://localhost:3000` (scheme + host + port, no trailing slash), with all methods and headers. Without it the browser hides responses to requests sent from the frontend's Client Components (the "Electives only" filter, the like button, the enrollment form). Requests from the Next.js server (Server Components) don't need CORS. CORS is not a protection for data: the server still executes requests from any origin.
+- **camelCase in JSON.** `CamelModel` (`alias_generator=to_camel`, `validate_by_name=True`, `validate_by_alias=True`) makes `is_elective` appear as `isElective`, `course_id` as `courseId`, etc. Python code stays snake_case; query parameters (`is_elective`, `sort`, `page`, `page_size`) are not renamed.
+- **New routes** (data lives in memory and resets on every restart):
+
+| Route | Example response |
+| --- | --- |
+| `POST /courses/web-security/like` | `200` `{"id": "web-security", ..., "isElective": false, "likes": 22}`; unknown id → `404` `{"detail": "Course not found"}` |
+| `POST /enrollments` with `{"courseId": "web-security", "studentName": "Aigerim"}` | `201` `{"courseId": "web-security", "studentName": "Aigerim", "id": 1}`; name shorter than 2 chars → `422`; unknown course → `404` |
+| `GET /enrollments` | `[{"courseId": "web-security", "studentName": "Aigerim", "id": 1}]` |
